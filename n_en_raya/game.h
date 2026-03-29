@@ -1,22 +1,23 @@
-#include <iostream>
+#ifndef GAME_H
+#define GAME_H
+
+// Player : X
+// CPU : O
+// CPU - Player
+// max - min: -> par = max, impar = min
+#define PLAYER_PIECE 'X'
+#define CPU_PIECE 'O'
+#define EMPTY ' '
+
 #include <vector>
 #include <limits>
 #include <thread>
 #include <chrono>
 #include <map>
 #include <random>
-
-#define PLAYER_PIECE 'X'
-#define CPU_PIECE 'O'
-#define EMPTY ' '
+#include <iostream>
 
 using map = std::vector<std::vector<char>>;
-
-// Player : X
-// CPU : O
-// CPU - Player
-// max - min: -> par = max, impar = min
-
 
 namespace utils
 {
@@ -130,7 +131,7 @@ public:
         root = build_tree(in_map, 0, difficulty);
         alpha_beta_prune(root, 0, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
 
-        map table;
+        map table = in_map;
         int mov_number = root->value;
         for (auto& c : root->children)
             if (c->value == mov_number)
@@ -249,6 +250,7 @@ private:
 
 
         char current_piece = EMPTY;
+
         if (current_height % 2 == 0)
             current_piece = CPU_PIECE;
         else
@@ -283,17 +285,24 @@ private:
     }
 };
 
-
 class game
 {
 public:
+    bool is_playing;
+
     game(const size_t& in_n) :
-        n(in_n), table(in_n, std::vector<char>(in_n, ' ')), difficulty(0)
-    { }
+        n(in_n), table(in_n, std::vector<char>(in_n, ' ')), difficulty(0), is_playing(true)
+    {
+        std::random_device rd;
+        std::mt19937  gen(rd());
+        std::uniform_int_distribution<> distrib(1, 2);
+
+        turn = distrib(gen);
+    }
 
     void play()
     {
-        bool is_playing = true;
+        is_playing = true;
 
 
         int opt = -1;
@@ -316,12 +325,6 @@ public:
             difficulty = 9;
             break;
         }
-
-        std::random_device rd;
-        std::mt19937  gen(rd());
-        std::uniform_int_distribution<> distrib(1, 2);
-
-        int turn = distrib(gen);
 
         while (is_playing)
         {
@@ -361,29 +364,80 @@ public:
 
     }
 
-private:
-    map table;
-    size_t n, difficulty;
-
-    void choose_CPU_move(int difficulty)
+    void setup_game()
     {
-        tree choosing_tree(n);
-        table = choosing_tree.get_next_move(table, difficulty);
+        int opt = -1;
+        std::cout << "Select difficulty:\n";
+        std::cout << "1. Easy\n";
+        std::cout << "2. Medium\n";
+        std::cout << "3. Hard\n";
+        std::cout << "Enter option: ";
+        std::cin >> opt;
+
+        switch (opt)
+        {
+        case 1:
+            difficulty = 3;
+            break;
+        case 2:
+            difficulty = 6;
+            break;
+        case 3:
+            difficulty = 9;
+            break;
+        }
     }
 
+    void next_move()
+    {
+        system("cls");
+        draw_table();
+
+        int winner = -1;
+        if (utils::check_winner(table, winner, n) || utils::map_is_full(table, n))
+        {
+            if (winner == 1)
+                std::cout << "Player wins!\n";
+            else if (winner == 2)
+                std::cout << "CPU wins!\n";
+            else
+                std::cout << "Nobody wins, tie!\n";
+
+            is_playing = false;
+            return;
+        }
+
+        if (turn % 2 == 0) // PLAYER
+        {
+            int row = -1, col = -1;
+            std::cout << "Player Turn!\n";
+        
+            std::cout << "Enter row: ";
+            std::cin >> row;
+
+            std::cout << "Enter col: ";
+            std::cin >> col;
+            table[row][col] = PLAYER_PIECE;
+        }
+        else
+            choose_CPU_move(difficulty);
+
+        turn++;
+    }
+    
     void draw_table()
     {
         for (int i = 0; i <= n; i++)
             std::cout << "-\t";
         std::cout << "\n";
-
+    
         std::cout << "\n";
         std::cout << "\t";
         for (int i = 0; i < n; i++)
             std::cout << i << "\t";
         std::cout << "\n";
-
-
+    
+    
         for (int i = 0; i < n; i++)
         {
             std::cout << i << "\t";
@@ -391,15 +445,28 @@ private:
                 std::cout << table[i][j] << "\t";
             std::cout << "\n";
         }
-
+    
         for (int i = 0; i <= n; i++)
             std::cout << "-\t";
         std::cout << "\n";
     }
+
+    map get_table()
+    {
+        return table;
+    }
+
+private:
+    map table;
+    size_t n, difficulty;
+    int turn;
+
+    void choose_CPU_move(int difficulty)
+    {
+        tree choosing_tree(n);
+        table = choosing_tree.get_next_move(table, difficulty);
+    }
+
 };
 
-int main()
-{
-    game jueguin(3);
-    jueguin.play();
-}
+#endif
