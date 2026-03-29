@@ -1,405 +1,405 @@
 #include <iostream>
-#include <map>
 #include <vector>
-#include <cmath>
-#include <deque>
-#include <set>
 #include <limits>
-#include <queue>
+#include <thread>
+#include <chrono>
+#include <map>
+#include <random>
 
-// 21 x 21
+#define PLAYER_PIECE 'X'
+#define CPU_PIECE 'O'
+#define EMPTY ' '
 
-#define INIT_POS {0, 0}
+using map = std::vector<std::vector<char>>;
 
-using coord = std::pair<int, int>;
-using coord_data = std::pair<coord, double>;
+// Player : X
+// CPU : O
+// CPU - Player
+// max - min: -> par = max, impar = min
 
-/*
-class node
+
+namespace utils
 {
-public:
-    coord position;
-    std::vector<node*> neighbors;
-
-
-    node(const coord& in_coord) :
-        position(in_coord), neighbors() {}
-
-    bool operator < (const node& other)
+    bool winner_column(int n_row, const map& in_map, const char& game_piece, const int& n)
     {
-        if (position.first != other.position.first)
-            return position.first < other.position.first;
-        
-        return position.second < other.position.second;
-    }
-
-    void add(node* in_node)
-    {
-        neighbors.push_back(in_node);
-    }
-};
-*/
-
-double distance(const coord& a, const coord& b)
-{
-    double first = a.first - b.first;
-    double second = a.second - b.second;
-
-    return std::sqrt((first * first) + (second * second));
-}
-
-
-class graph_draw
-{
-public:
-    coord STARTING_POS, ENDING_POS;
-
-    graph_draw(const size_t& in_COLS, const size_t& in_ROWS, const size_t& in_step) :
-        COLS(in_COLS), ROWS(in_ROWS), step(in_step), STARTING_POS(INIT_POS), ENDING_POS(INIT_POS)
-    {
-        // Creating nodes
-        for (auto j = 0; j <= in_ROWS; j++)
-            for (auto i = 0; i <= in_COLS; i++)
-                graph[{i * step, j * step}] = std::set<coord>();
-
-
-        for (auto j = 0; j < in_ROWS; j++)
-            for (auto i = 0; i < in_COLS; i++)
-                graph[{(step/2) + (i * step), (step / 2) + (j * step)}] = std::set<coord>();
-
-        // Creating edges
-        for (auto j = 0; j <= in_ROWS; j++)
-            for (auto i = 0; i <= in_COLS; i++)
-            {
-                coord current = { i * step, j * step };
-
-                coord right = {current.first + step, current.second};
-                coord down = { current.first, current.second + step};
-
-                if (is_valid(right))
-                {
-                    graph[current].insert(right);
-                    graph[right].insert(current);
-                }
-
-                if (is_valid(down))
-                {
-                    graph[current].insert(down);
-                    graph[down].insert(current);
-                }
-            }
-
-        for (auto j = 0; j < in_ROWS; j++)
-            for (auto i = 0; i < in_COLS; i++)
-            {
-                size_t half_s = step / 2;
-
-                coord current = { half_s + (i * step), half_s + (j * step) };
-                coord u_r = { current.first + half_s, current.second - half_s };
-                coord u_l = { current.first - half_s, current.second - half_s };
-                coord b_r = { current.first + half_s, current.second + half_s};
-                coord b_l = { current.first - half_s, current.second + half_s};
-
-                if (is_valid(u_r))
-                {
-                    graph[current].insert(u_r);
-                    graph[u_r].insert(current);
-                }
-
-                if (is_valid(u_l))
-                {
-                    graph[current].insert(u_l);
-                    graph[u_l].insert(current);
-                }
-
-                if (is_valid(b_r))
-                {
-                    graph[current].insert(b_r);
-                    graph[b_r].insert(current);
-                }
-
-                if (is_valid(b_l))
-                {
-                    graph[current].insert(b_l);
-                    graph[b_l].insert(current);
-                }
-            }
-    }
-
-    void print()
-    {
-        for (auto& c : graph)
-        {
-            std::cout << c.first.first << " - " << c.first.second << " :";
-
-            for (auto& n : c.second)
-                std::cout << "[ " << n.first << ", " << n.second << " ] ";
-            std::cout << "\n";
-        }
-    }
-
-    void set_POS(const coord& in_STARTING, const coord& in_ENDING)
-    {
-        STARTING_POS = in_STARTING;
-        ENDING_POS = in_ENDING;
-    }
-
-    void erase_node(const coord& to_erase)
-    {
-        if (is_valid(to_erase))
-        {
-            for (auto &key : graph[to_erase])
-                graph[key].erase(to_erase);
-
-            graph.erase(to_erase);
-        }
-    }
-
-    void dfs(std::set<coord>& visited, std::vector<coord>& path)
-    {
-        bool found = false;
-        std::deque<coord> to_explore;
-
-        //       Coord, parent
-        std::map<coord, coord> parents;
-
-        to_explore.push_back(STARTING_POS);
-        visited.insert(STARTING_POS);
-
-        while (!to_explore.empty())
-        {
-            auto current = to_explore.front();
-            to_explore.pop_front();
-
-
-            if (current == ENDING_POS)
-            {
-                found = true;
-                break;
-            }
-
-            for (auto& neighbor : graph[current])
-            {
-                if (visited.find(neighbor) == visited.end())
-                {
-                    visited.insert(neighbor);
-                    parents[neighbor] = current;
-                    to_explore.push_front(neighbor);
-                }
-            }
-        }
-
-        // Save path
-        if (found)
-        {
-            auto backwards = ENDING_POS;
-            while (backwards != STARTING_POS)
-            {
-                path.push_back(backwards);
-                backwards = parents[backwards];
-            }
-        }
-    }
-
-    void bfs(std::set<coord>& visited, std::vector<coord>& path)
-    {
-        bool found = false;
-        std::deque<coord> to_explore;
-
-        //       Coord, parent
-        std::map<coord, coord> parents;
-
-        to_explore.push_back(STARTING_POS);
-        visited.insert(STARTING_POS);
-
-
-        while (!to_explore.empty())
-        {
-            auto current = to_explore.front();
-            to_explore.pop_front();
-
-
-            if (current == ENDING_POS)
-            {
-                found = true;
-                break;
-            }
-
-            for (auto& neighbor : graph[current])
-            {
-                if (visited.find(neighbor) == visited.end())
-                {
-                    visited.insert(neighbor);
-                    parents[neighbor] = current;
-                    to_explore.push_back(neighbor);
-                }
-            }
-        }
-
-        // Save path
-        if (found)
-        {
-            auto backwards = ENDING_POS;
-            while (backwards != STARTING_POS)
-            {
-                path.push_back(backwards);
-                backwards = parents[backwards];
-            }
-        }
-    }
-
-    void hill_climbing(std::set<coord>& visited, std::vector<coord>& path)
-    {
-        bool found = false;
-
-        std::priority_queue<hill, std::vector<hill>, hill> to_explore;
-
-        //       Coord, parent
-        std::map<coord, coord> parents;
-
-        to_explore.push(hill(STARTING_POS, distance(STARTING_POS, ENDING_POS)));
-        visited.insert(STARTING_POS);
-
-        while (!to_explore.empty())
-        {
-            auto current_dt = to_explore.top();
-            auto current = current_dt.pos;
-            to_explore.pop();
-
-
-            if (current == ENDING_POS)
-            {
-                found = true;
-                break;
-            }
-
-            for (auto& neighbor : graph[current])
-            {
-                if (visited.find(neighbor) == visited.end()) // New neighbor
-                {
-                    parents[neighbor] = current;
-                    visited.insert(neighbor);
-                    double new_distance = distance(neighbor, ENDING_POS);
-
-                    to_explore.push(hill(neighbor, new_distance));
-                }
-            }
-        }
-
-        // Save path
-        if (found)
-        {
-            auto backwards = ENDING_POS;
-            while (backwards != STARTING_POS)
-            {
-                path.push_back(backwards);
-                backwards = parents[backwards];
-            }
-        }
-    }
-
-    void a_star(std::set<coord>& visited, std::vector<coord>& path)
-    {
-        bool found = false;
-
-        std::priority_queue<a_st, std::vector<a_st>, a_st> to_explore;
-
-        //       Coord, parent
-        std::map<coord, coord> parents;
-
-        to_explore.push(a_st(STARTING_POS, 0.0, distance(STARTING_POS, ENDING_POS)));
-        visited.insert(STARTING_POS);
-
-        while (!to_explore.empty())
-        {
-            auto current_dt = to_explore.top();
-            auto current = current_dt.pos;
-            to_explore.pop();
-
-            if (current == ENDING_POS)
-            {
-                found = true;
-                break;
-            }
-
-            for (auto& neighbor : graph[current])
-            {
-                if (visited.find(neighbor) == visited.end()) // New neighbor
-                {
-                    parents[neighbor] = current;
-                    visited.insert(neighbor);
-
-                    double new_g = current_dt.g + distance(current, neighbor);
-                    double new_h = distance(neighbor, ENDING_POS);
-
-                    to_explore.push(a_st(neighbor, new_g, new_h));
-                }
-            }
-        }
-
-        // Save path
-        if (found)
-        {
-            auto backwards = ENDING_POS;
-            while (backwards != STARTING_POS)
-            {
-                path.push_back(backwards);
-                backwards = parents[backwards];
-            }
-        }
-    }
-
-private:
-
-    class hill
-    {
-    public:
-        coord pos;
-        double dist;
-
-        hill(const coord& in_pos, const double& in_dist) :
-            pos(in_pos), dist(in_dist)
-        {}
-
-        bool operator () (const hill& a, const hill& b)
-        {
-            return a.dist > b.dist;
-        }
-    };
-
-    class a_st
-    {
-    public:
-        coord pos;
-        double h, g;
-
-        a_st(const coord& in_pos, const double& in_g, const double& in_h) :
-            pos(in_pos), g(in_g), h(in_h)
-        { }
-
-        bool operator () (const a_st& a, const a_st& b)
-        {
-            return (a.h + a.g) > (b.h + b.g);
-        }
-    };
-
-    std::map<coord, std::set<coord>> graph;
-    size_t COLS, ROWS, step;
-
-    bool is_valid(const coord& in_cord)
-    {
-        if (in_cord.first < 0 || in_cord.first > COLS * step)
-            return false;
-        else if (in_cord.second < 0 || in_cord.second > ROWS * step)
-            return false;
+        for (int i = 0; i < n; i++)
+            if (in_map[i][n_row] != game_piece)
+                return false;
 
         return true;
     }
+
+    bool winner_row(int n_col, const map& in_map, const char& game_piece, const int& n)
+    {
+        for (int i = 0; i < n; i++)
+            if (in_map[n_col][i] != game_piece)
+                return false;
+
+        return true;
+    }
+
+    bool winner_diagonal(const map& in_map, const char& game_piece, const int& n)
+    {
+        for (int i = 0; i < n; i++)
+            if (in_map[i][i] != game_piece)
+                return false;
+
+        return true;
+    }
+
+    bool winner_diagonal_reverse(const map& in_map, const char& game_piece, const int& n)
+    {
+        for (int i = 0; i < n; i++)
+            if (in_map[i][n - i - 1] != game_piece)
+                return false;
+
+        return true;
+    }
+
+    bool check_winner(const map& in_map, int& winner, const int& n) // 1 == player, 2 == cpu
+    {
+        for (int i = 0; i < n; i++)
+        {
+            // Player
+            if (winner_column(i, in_map, PLAYER_PIECE, n) || winner_row(i, in_map, PLAYER_PIECE, n))
+            {
+                winner = 1;
+                return true;
+            }
+            // CPU
+            else if (winner_column(i, in_map, CPU_PIECE, n) || winner_row(i, in_map, CPU_PIECE, n))
+            {
+                winner = 2;
+                return true;
+            }
+        }
+
+        // Player
+        if (winner_diagonal(in_map, PLAYER_PIECE, n) || winner_diagonal_reverse(in_map, PLAYER_PIECE, n))
+        {
+            winner = 1;
+            return true;
+        }
+        else if (winner_diagonal(in_map, CPU_PIECE, n) || winner_diagonal_reverse(in_map, CPU_PIECE, n))
+        {
+            winner = 2;
+            return true;
+        }
+
+        return false;
+    }
+
+    bool map_is_full(const map& in_map, const int& n)
+    {
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                if (in_map[i][j] == EMPTY)
+                    return false;
+
+        return true;
+    }
+}
+
+class node
+{
+public:
+    int value;
+    std::vector<node*> children;
+    map table;
+
+    node(int in_value, const map& in_table)://, const map& in_table) :
+        value(in_value), children(), table(in_table)
+    { }
+};
+
+class tree
+{
+public:
+
+    tree(const int& in_n) :
+        n(in_n), root(nullptr) { }
+    
+    ~tree()
+    {
+        if (root)
+            erase_node(root);
+    }
+
+    map get_next_move(const map& in_map, const int& difficulty)
+    {
+        root = build_tree(in_map, 0, difficulty);
+        alpha_beta_prune(root, 0, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+
+        map table;
+        int mov_number = root->value;
+        for (auto& c : root->children)
+            if (c->value == mov_number)
+            {
+                table = c->table;
+                break;
+            }
+
+        return table;
+    }
+
+private:
+    int n;
+    node* root;
+
+    void erase_node(node*& in_node)
+    {
+        if (!in_node)
+            return;
+
+        for (auto& node : in_node->children)
+            erase_node(node);
+
+        delete in_node;
+    }
+
+    int count_options_to_win(const char& game_piece, const map& in_map)
+    {
+        int options = 0;
+
+        map filled_table = fill_map_with_symbol(in_map, game_piece);
+
+        for (size_t i = 0; i < n; i++)
+        {
+            if (utils::winner_column(i, filled_table, game_piece, n))
+                options++;
+
+            if (utils::winner_row(i, filled_table, game_piece, n))
+                options++;
+        }
+
+        if (utils::winner_diagonal(filled_table, game_piece, n))
+            options++;
+        if (utils::winner_diagonal_reverse(filled_table, game_piece, n))
+            options++;
+
+        return options;
+    }
+
+    int alpha_beta_prune(node* in_node, int height, int alpha, int beta)
+    {
+        // Check all childs
+        if (in_node->children.empty())
+            return in_node->value;
+
+        bool is_max = height % 2 == 0;
+        int best_value = is_max ? std::numeric_limits<int>::min() : std::numeric_limits<int>::max();
+
+        for (auto it = in_node->children.begin();
+            it != in_node->children.end() && (alpha < beta);
+            it++)
+        {
+            int temp_value = alpha_beta_prune(*it, height + 1, alpha, beta);
+
+            if (is_max) // Max level -> Edit alpha
+            {
+                alpha = std::max(temp_value, alpha);
+                best_value = std::max(best_value, temp_value);
+            }
+            else // Min level -> Edit beta
+            {
+                beta = std::min(beta, temp_value);
+                best_value = std::min(best_value, temp_value);
+            }
+        }
+
+        in_node->value = best_value;
+        return best_value;
+    }
+
+    std::vector<map> get_all_variants(map in_table, const char& player)
+    {
+        std::vector<map> vector_maps;
+
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                if (in_table[i][j] == EMPTY)
+                {
+                    in_table[i][j] = player;
+                    vector_maps.push_back(in_table);
+
+                    in_table[i][j] = EMPTY;
+                }
+            }
+        }
+
+        return vector_maps;
+    }
+
+    node* build_tree(const map& in_map, int current_height, int max_height)
+    {
+        // There is a winner or a tie
+        int winner = 0;
+        //bool check_winner(const map & in_map, int& winner) // 1 == player, 2 == cpu
+        if ((current_height >= max_height) ||
+            utils::map_is_full(in_map, n) ||
+            utils::check_winner(in_map, winner, n))
+        {
+            int player = count_options_to_win(PLAYER_PIECE, in_map);
+            int CPU = count_options_to_win(CPU_PIECE, in_map);
+
+            return new node(CPU - player, in_map);
+        }
+
+
+        char current_piece = EMPTY;
+        if (current_height % 2 == 0)
+            current_piece = CPU_PIECE;
+        else
+            current_piece = PLAYER_PIECE;
+
+        auto variants = get_all_variants(in_map, current_piece);
+
+        std::vector<node*> children;
+
+        for (auto v : variants)
+        {
+            node* new_node = build_tree(v, current_height + 1, max_height);
+            children.push_back(new_node);
+        }
+
+        node* new_node = new node(0, in_map);
+        new_node->children = children;
+
+        return new_node;
+    }
+
+    map fill_map_with_symbol(const map in_map, const char& game_piece)
+    {
+        map temp = in_map;
+
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                if (temp[i][j] == EMPTY)
+                    temp[i][j] = game_piece;
+
+        return temp;
+    }
 };
 
 
+class game
+{
+public:
+    game(const size_t& in_n) :
+        n(in_n), table(in_n, std::vector<char>(in_n, ' ')), difficulty(0)
+    { }
+
+    void play()
+    {
+        bool is_playing = true;
+
+
+        int opt = -1;
+        std::cout << "Select difficulty:\n";
+        std::cout << "1. Easy\n";
+        std::cout << "2. Medium\n";
+        std::cout << "3. Hard\n";
+        std::cout << "Enter option: ";
+        std::cin >> opt;
+
+        switch (opt)
+        {
+        case 1:
+            difficulty = 3;
+            break;
+        case 2:
+            difficulty = 6;
+            break;
+        case 3:
+            difficulty = 9;
+            break;
+        }
+
+        std::random_device rd;
+        std::mt19937  gen(rd());
+        std::uniform_int_distribution<> distrib(1, 2);
+
+        int turn = distrib(gen);
+
+        while (is_playing)
+        {
+            system("cls");
+            draw_table();
+
+            int winner = -1;
+            if (utils::check_winner(table, winner, n) || utils::map_is_full(table, n))
+            {
+                if (winner == 1)
+                    std::cout << "Player wins!\n";
+                else if (winner == 2)
+                    std::cout << "CPU wins!\n";
+                else
+                    std::cout << "Nobody wins, tie!\n";
+                break;
+            }
+
+            if (turn % 2 == 0) // PLAYER
+            {
+                int row = -1, col = -1;
+                std::cout << "Player Turn!\n";
+            
+                std::cout << "Enter row: ";
+                std::cin >> row;
+
+                std::cout << "Enter col: ";
+                std::cin >> col;
+                table[row][col] = PLAYER_PIECE;
+            }
+            else // CPU
+                choose_CPU_move(difficulty);
+
+            turn++;
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+
+    }
+
+private:
+    map table;
+    size_t n, difficulty;
+
+    void choose_CPU_move(int difficulty)
+    {
+        tree choosing_tree(n);
+        table = choosing_tree.get_next_move(table, difficulty);
+    }
+
+    void draw_table()
+    {
+        for (int i = 0; i <= n; i++)
+            std::cout << "-\t";
+        std::cout << "\n";
+
+        std::cout << "\n";
+        std::cout << "\t";
+        for (int i = 0; i < n; i++)
+            std::cout << i << "\t";
+        std::cout << "\n";
+
+
+        for (int i = 0; i < n; i++)
+        {
+            std::cout << i << "\t";
+            for (int j = 0; j < n; j++)
+                std::cout << table[i][j] << "\t";
+            std::cout << "\n";
+        }
+
+        for (int i = 0; i <= n; i++)
+            std::cout << "-\t";
+        std::cout << "\n";
+    }
+};
+
 int main()
 {
-    graph_draw graphin(2, 2, 10);
-    graphin.print();
+    game jueguin(3);
+    jueguin.play();
 }
