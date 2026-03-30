@@ -23,7 +23,7 @@ const char *fragmentShaderRED = "#version 330 core\n"
                                    "out vec4 FragColor;\n"
                                    "void main()\n"
                                    "{\n"
-                                   "   FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);\n"
+                                   "   FragColor = vec4(0.8554f, 0.1015f, 0.1015f, 1.0f);\n"
                                    "}\0";
 								   
 const char *fragmentShaderGREEN = "#version 330 core\n"
@@ -38,15 +38,15 @@ const char *fragmentShaderBLUE = "#version 330 core\n"
                                    "out vec4 FragColor;\n"
                                    "void main()\n"
                                    "{\n"
-                                   "   FragColor = vec4(0.0f, 0.0f, 1.0f, 1.0f);\n"
+                                   "   FragColor = vec4(0.0859f, 0.1171f, 0.3281f, 1.0f);\n"
                                    "}\0";								   
 
 
-const char *fragmentShaderBROWN = "#version 330 core\n"
+const char *fragmentShaderORANGE = "#version 330 core\n"
                                    "out vec4 FragColor;\n"
                                    "void main()\n"
                                    "{\n"
-                                   "   FragColor = vec4(1.0f, 0.3f, 1.0f, 1.0f);\n"
+                                   "   FragColor = vec4(0.9414f, 0.4257f, 0.2031f, 1.0f);\n"
                                    "}\0";
 
 const char *fragmentShaderYELLOW = "#version 330 core\n"
@@ -54,6 +54,13 @@ const char *fragmentShaderYELLOW = "#version 330 core\n"
                                    "void main()\n"
                                    "{\n"
                                    "   FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"
+                                   "}\0";
+
+const char *fragmentShaderBACKGROUND = "#version 330 core\n"
+                                   "out vec4 FragColor;\n"
+                                   "void main()\n"
+                                   "{\n"
+                                   "   FragColor = vec4(0.5468f, 0.7773f, 0.7686f, 1.0f);\n"
                                    "}\0";
 
 
@@ -112,13 +119,14 @@ int main()
     shaders.add_fragment_shader("RED", fragmentShaderRED);
     shaders.add_fragment_shader("GREEN", fragmentShaderGREEN);
     shaders.add_fragment_shader("BLUE", fragmentShaderBLUE);
-    shaders.add_fragment_shader("BROWN", fragmentShaderBROWN);
+    shaders.add_fragment_shader("ORANGE", fragmentShaderORANGE);
     shaders.add_fragment_shader("YELLOW", fragmentShaderYELLOW);
+    shaders.add_fragment_shader("BACKGROUND", fragmentShaderBACKGROUND);
 
     shaders.delete_shaders();
     
     // GAME SET - UP
-    const int n = 3;
+    const int n = 4;
     game jueguin(n);
     jueguin.setup_game();
 
@@ -136,13 +144,14 @@ int main()
     float &init_y = drawer.init_y;
     float mid = step / 2.0f;
 
+    glLineWidth(5.0f);
     while(!glfwWindowShouldClose(window))
     {
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.5468f, 0.7773f, 0.7686f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 		
 
-        shaders.use_shader("BROWN");
+        shaders.use_shader("ORANGE");
         shaders.set_float("scale", 1.0f);
         shaders.set_vec2("offset", 0.0f, 0.0f);
         drawer.draw_table();
@@ -165,14 +174,14 @@ int main()
                     drawer.draw_circle();
 
 
-                    shaders.use_shader("RED");
-                    shaders.set_float("scale", (step/2.0f) * 0.7);
+                    shaders.use_shader("BACKGROUND");
+                    shaders.set_float("scale", (step/2.0f) * 0.65);
                     shaders.set_vec2("offset", new_x, new_y);
                     drawer.draw_circle();
                 }
                 else if (table[y][x] == PLAYER_PIECE)
                 {
-                    shaders.use_shader("YELLOW");
+                    shaders.use_shader("RED");
                     shaders.set_float("scale", (step/2.0f) * 0.7);
                     shaders.set_vec2("offset", new_x, new_y);
                     drawer.draw_cross();
