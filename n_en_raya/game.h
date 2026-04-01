@@ -5,6 +5,7 @@
 // CPU : O
 // CPU - Player
 // max - min: -> par = max, impar = min
+
 #define PLAYER_PIECE 'X'
 #define CPU_PIECE 'O'
 #define EMPTY ' '
@@ -288,80 +289,30 @@ private:
 class game
 {
 public:
-    bool is_playing;
+    bool is_playing, PLAYER_TURN, CPU_IS_THINKING;
 
-    game(const size_t& in_n) :
-        n(in_n), table(in_n, std::vector<char>(in_n, ' ')), difficulty(0), is_playing(true)
+    game() :
+        n(0), table(), difficulty(0), is_playing(true), PLAYER_TURN(false), CPU_IS_THINKING(false)
+    {}
+    
+    void create_game()
     {
+        std::cout << "Enter game size: ";
+        std::cin >> n;
+
+        is_playing = true;
+        PLAYER_TURN = false;
+        CPU_IS_THINKING = false;
+        table = std::vector(n, std::vector<char>(n, EMPTY));
+
         std::random_device rd;
         std::mt19937  gen(rd());
         std::uniform_int_distribution<> distrib(1, 2);
 
-        turn = distrib(gen);
-    }
+        int turn = distrib(gen);
 
-    void play()
-    {
-        is_playing = true;
-
-
-        int opt = -1;
-        std::cout << "Select difficulty:\n";
-        std::cout << "1. Easy\n";
-        std::cout << "2. Medium\n";
-        std::cout << "3. Hard\n";
-        std::cout << "Enter option: ";
-        std::cin >> opt;
-
-        switch (opt)
-        {
-        case 1:
-            difficulty = 3;
-            break;
-        case 2:
-            difficulty = 6;
-            break;
-        case 3:
-            difficulty = 9;
-            break;
-        }
-
-        while (is_playing)
-        {
-            system("cls");
-            draw_table();
-
-            int winner = -1;
-            if (utils::check_winner(table, winner, n) || utils::map_is_full(table, n))
-            {
-                if (winner == 1)
-                    std::cout << "Player wins!\n";
-                else if (winner == 2)
-                    std::cout << "CPU wins!\n";
-                else
-                    std::cout << "Nobody wins, tie!\n";
-                break;
-            }
-
-            if (turn % 2 == 0) // PLAYER
-            {
-                int row = -1, col = -1;
-                std::cout << "Player Turn!\n";
-            
-                std::cout << "Enter row: ";
-                std::cin >> row;
-
-                std::cout << "Enter col: ";
-                std::cin >> col;
-                table[row][col] = PLAYER_PIECE;
-            }
-            else // CPU
-                choose_CPU_move(difficulty);
-
-            turn++;
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        }
-
+        PLAYER_TURN = (turn % 2)? true : false;
+        std::cout << ((turn % 2)? "PLAYER STARTS" : "CPU STARTS") << "\n";
     }
 
     void setup_game()
@@ -388,43 +339,71 @@ public:
         }
     }
 
-    void next_move()
+    void is_there_any_winner()
     {
-        system("cls");
-        draw_table();
-
         int winner = -1;
         if (utils::check_winner(table, winner, n) || utils::map_is_full(table, n))
         {
+            std::cout << "\n\n\n\n";
+
             if (winner == 1)
-                std::cout << "Player wins!\n";
+            {
+                std::cout << "---------------------------\n";
+                std::cout << "---------------------------\n";
+                std::cout << "-----  PLAYER wins!  ------\n";
+                std::cout << "---------------------------\n";
+                std::cout << "---------------------------\n";
+            }
             else if (winner == 2)
-                std::cout << "CPU wins!\n";
+            {
+                std::cout << "---------------------------\n";
+                std::cout << "---------------------------\n";
+                std::cout << "-------  CPU wins!  -------\n";
+                std::cout << "---------------------------\n";
+                std::cout << "---------------------------\n";
+            }
             else
-                std::cout << "Nobody wins, tie!\n";
+            {
+                std::cout << "---------------------------\n";
+                std::cout << "---------------------------\n";
+                std::cout << "---  Nobody wins, tie!  ---\n";
+                std::cout << "---------------------------\n";
+                std::cout << "---------------------------\n";
+            }
 
             is_playing = false;
             return;
         }
+    }    
 
-        if (turn % 2 == 0) // PLAYER
-        {
-            int row = -1, col = -1;
-            std::cout << "Player Turn!\n";
-        
-            std::cout << "Enter row: ";
-            std::cin >> row;
+    void move_CPU()
+    {
+        std::cout << "\n\n\nCPU - CHAMBEANDING\n\n";
+        choose_CPU_move(difficulty);
 
-            std::cout << "Enter col: ";
-            std::cin >> col;
-            table[row][col] = PLAYER_PIECE;
-        }
-        else
-            choose_CPU_move(difficulty);
+        PLAYER_TURN = true;
+        CPU_IS_THINKING = false;
 
-        turn++;
+        is_there_any_winner();
+
+        if (is_playing)
+            std::cout << "PLAYER TURN\n";
     }
     
+    void move_PLAYER(int row, int col)
+    {
+        if (row < 0 || row >= n || col < 0 || col >= n)
+            return;
+
+        if (table[row][col] == EMPTY)
+        {
+            table[row][col] = PLAYER_PIECE;
+            PLAYER_TURN = false;
+
+            is_there_any_winner();
+        }
+    }
+
     void draw_table()
     {
         for (int i = 0; i <= n; i++)
@@ -456,10 +435,13 @@ public:
         return table;
     }
 
+    size_t get_n()
+    {
+        return n;
+    }
 private:
     map table;
     size_t n, difficulty;
-    int turn;
 
     void choose_CPU_move(int difficulty)
     {

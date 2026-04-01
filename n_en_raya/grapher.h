@@ -1,7 +1,6 @@
 #ifndef GRAPHER_H
 #define GRAPHER_H
 
-
 /*
 #define GLAD_GL_IMPLEMENTATION
 #include <glad/gl.h>
@@ -23,10 +22,17 @@ class Grapher
     public:
     float step, init_x, init_y;
 
-    Grapher(const float &in_n):
-        n(in_n), VAO_TABLE(0), VBO_TABLE(0), init(0.2f)
+    Grapher():
+        step(0), init_x(0), init_y(0), n(0), VAO_TABLE(0), VBO_TABLE(0), init(0.2f)
+    { }
+
+    void set_grapher(int in_n)
     {
-        step = (2.0f - (2 * init)) / float(in_n);
+        n = in_n;
+
+        vertices_table.clear();
+
+        step = (2.0f - (2 * init)) / float(n);
 
         init_x = -1.0f + init;
         float end_x = 1.0f - init;
@@ -64,8 +70,11 @@ class Grapher
 
     void set_table()
     {
-        glGenVertexArrays(1, &VAO_TABLE);
-        glGenBuffers(1, &VBO_TABLE);
+        if (VAO_TABLE == 0)
+        {
+            glGenVertexArrays(1, &VAO_TABLE);
+            glGenBuffers(1, &VBO_TABLE);
+        }
         
         glBindVertexArray(VAO_TABLE);
         
@@ -93,6 +102,8 @@ class Grapher
 
     void set_circle()
     {
+        vertices_circle.clear();
+
         int n_points = 100;
         float radius = 1.0;
 
