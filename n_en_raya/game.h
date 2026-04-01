@@ -19,6 +19,7 @@
 #include <iostream>
 
 using map = std::vector<std::vector<char>>;
+using coord = std::pair<int, int>;
 
 namespace utils
 {
@@ -107,10 +108,10 @@ class node
 public:
     int value;
     std::vector<node*> children;
-    map table;
+    coord coords;
 
-    node(int in_value, const map& in_table)://, const map& in_table) :
-        value(in_value), children(), table(in_table)
+    node(int in_value, const coord& in_coords)://, const map& in_table) :
+        value(in_value), children(), coords(in_coords)
     { }
 };
 
@@ -129,7 +130,7 @@ public:
 
     map get_next_move(const map& in_map, const int& difficulty)
     {
-        root = build_tree(in_map, 0, difficulty);
+        root = build_tree(in_map, 0, difficulty, {-1, -1});
         alpha_beta_prune(root, 0, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
 
         map table = in_map;
@@ -137,7 +138,10 @@ public:
         for (auto& c : root->children)
             if (c->value == mov_number)
             {
-                table = c->table;
+                int row = c->coords.first;
+                int col = c->coords.second;
+
+                table[row][col] = CPU_PIECE;
                 break;
             }
 
@@ -213,9 +217,9 @@ private:
         return best_value;
     }
 
-    std::vector<map> get_all_variants(map in_table, const char& player)
+    std::vector<std::pair<map, coord>> get_all_variants(map in_table, const char& player)
     {
-        std::vector<map> vector_maps;
+        std::vector<std::pair<map, coord>> vector_maps;
 
         for (int i = 0; i < n; i++)
         {
@@ -224,7 +228,7 @@ private:
                 if (in_table[i][j] == EMPTY)
                 {
                     in_table[i][j] = player;
-                    vector_maps.push_back(in_table);
+                    vector_maps.push_back({in_table, {i, j}});
 
                     in_table[i][j] = EMPTY;
                 }
@@ -234,7 +238,7 @@ private:
         return vector_maps;
     }
 
-    node* build_tree(const map& in_map, int current_height, int max_height)
+    node* build_tree(const map& in_map, int current_height, int max_height, const coord& moved)
     {
         // There is a winner or a tie
         int winner = 0;
@@ -246,7 +250,7 @@ private:
             int player = count_options_to_win(PLAYER_PIECE, in_map);
             int CPU = count_options_to_win(CPU_PIECE, in_map);
 
-            return new node(CPU - player, in_map);
+            return new node(CPU - player, moved);
         }
 
 
@@ -257,23 +261,23 @@ private:
         else
             current_piece = PLAYER_PIECE;
 
-        auto variants = get_all_variants(in_map, current_piece);
-
+            
         std::vector<node*> children;
-
+        auto variants = get_all_variants(in_map, current_piece);
+            
         for (auto v : variants)
         {
-            node* new_node = build_tree(v, current_height + 1, max_height);
+            node* new_node = build_tree(v.first, current_height + 1, max_height, v.second);
             children.push_back(new_node);
         }
 
-        node* new_node = new node(0, in_map);
+        node* new_node = new node(0, moved);
         new_node->children = children;
 
         return new_node;
     }
 
-    map fill_map_with_symbol(const map in_map, const char& game_piece)
+    map fill_map_with_symbol(const map &in_map, const char& game_piece)
     {
         map temp = in_map;
 
@@ -291,8 +295,9 @@ class game
 public:
     bool is_playing, PLAYER_TURN, CPU_IS_THINKING;
 
-    game() :
-        n(0), table(), difficulty(0), is_playing(true), PLAYER_TURN(false), CPU_IS_THINKING(false)
+    game(const size_t& in_easy, const size_t& in_medium, const size_t& in_hard) :
+        n(0), table(), difficulty(0), is_playing(true), PLAYER_TURN(false), CPU_IS_THINKING(false),
+        easy(in_easy), medium(in_medium), hard(in_hard)
     {}
     
     void create_game()
@@ -328,13 +333,13 @@ public:
         switch (opt)
         {
         case 1:
-            difficulty = 3;
+            difficulty = easy;
             break;
         case 2:
-            difficulty = 6;
+            difficulty = medium;
             break;
         case 3:
-            difficulty = 9;
+            difficulty = hard;
             break;
         }
     }
@@ -441,7 +446,7 @@ public:
     }
 private:
     map table;
-    size_t n, difficulty;
+    size_t n, difficulty, easy, medium, hard;
 
     void choose_CPU_move(int difficulty)
     {

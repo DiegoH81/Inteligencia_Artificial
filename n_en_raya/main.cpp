@@ -173,7 +173,7 @@ int main()
 
 
     // GAME SET - UP
-    game jueguin;
+    game jueguin(2, 4, 7);
     jueguin.create_game();
     jueguin.setup_game();
 
